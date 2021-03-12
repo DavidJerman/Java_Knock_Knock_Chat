@@ -86,7 +86,7 @@ public class ClientApp extends Application {
      *
      * POST / Public message sent to all users
      * POST_PRIVATE username / Private message to a specified person
-     * GET / A message from a user
+     * GET username / A message from a user
      * GET_PRIVATE username / A private message from a user
     **/
     String parseClientMessage(String text) {
