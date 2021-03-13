@@ -85,9 +85,10 @@ public class ClientApp extends Application {
      * Parsing rules
      *
      * POST / Public message sent to all users
-     * POST_PRIVATE username / Private message to a specified person
-     * GET username / A message from a user
-     * GET_PRIVATE username / A private message from a user
+     * POST_PRIVATE to_username / Private message to a specified person
+     *
+     * POST from_username / Public message from a user
+     * POST_PRIVATE from_username / Private message from a user
     **/
     String parseClientMessage(String text) {
         if (text.startsWith("/tell ")) {
@@ -109,9 +110,28 @@ public class ClientApp extends Application {
         }
     }
 
-    String parseServerMessage(String text) {
-
-        return text;
+    String[] parseServerMessage(String text) {
+        String[] data = new String[2];
+        final String trim = text.substring(text.indexOf("/") + 1).trim();
+        if (text.startsWith("POST_PRIVATE")) {
+            try {
+                data[0] = text.split("/")[0].trim().split("POST_PRIVATE")[1].trim();
+                data[0] += " to you";
+                data[1] = trim;
+            } catch (Exception ignored) {
+                return null;
+            }
+            return data;
+        } else if (text.startsWith("POST")) {
+            try {
+                data[0] = text.split("/")[0].trim().split("POST")[1].trim();
+                data[1] = trim;
+            } catch (Exception ignored) {
+                return null;
+            }
+            return data;
+        }
+        return null;
     }
 
     public static void main(String[] args) {
@@ -197,9 +217,18 @@ public class ClientApp extends Application {
                     serverIPTextField.setEditable(false);
                     serverPortTextField.setEditable(false);
                     usernameTextField.setEditable(false);
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    messengerThread.sendMsg("LOGIN " + username);
                 } else {
                     printText("client", "Could not parse data: missing or wrong data.");
                 }
+
             else {
                 printText("client", "You are already connected to a chat server!");
             }
@@ -243,6 +272,7 @@ public class ClientApp extends Application {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
         connectionEndedInfoLabel.setText(dtf.format(now));
+        messengerThread.sendMsg("LOGOUT");
         messengerThread.stopThread();
         if (messengerThread != null) logMessage("Chat ended: " + dtf.format(now) + "\n");
         messengerThread = null;
@@ -283,8 +313,12 @@ class MessengerThread extends Thread {
             System.out.println(remoteHostIP + "\n" + remoteHostPort);
             while ((fromServer = bufferedReader.readLine()) != null) {
                 if (!stopped) {
-                    appReference.printText("server", fromServer);
-                    appReference.logMessage("server", fromServer);
+                    System.out.println(fromServer);
+                    String[] data = appReference.parseServerMessage(fromServer);
+                    if (data != null) {
+                        appReference.printText(data[0], data[1]);
+                        appReference.logMessage(data[0], data[1]);
+                    }
                 }
             }
             // TODO
